@@ -12,10 +12,12 @@
    - name: install below packages
      yum:
        name: httpd
+       state: latest
 
    - name: install java for httpd pkg
      yum: 
        name: java
+       state: latest
 
    - name: Copy file to remote server
      copy:
