@@ -1,0 +1,32 @@
+---
+
+ - name: removal of httpd on server playbook
+   hosts: all
+   become: true
+   tasks:
+  
+   - name: remove below packages
+     yum:
+       name: httpd
+       state: absent
+
+   - name: remove java for httpd pkg
+     yum: 
+       name: java
+       state: absent
+
+   - name: remove file from remote server
+     file:
+       #src: /var/www/html/index.html
+        state: absent
+        dest: /var/www/html/index.html
+        owner: ANSIBLE-USER
+        group: ANSIBLE-USER
+        mode: '0644'
+
+   - name: Stop and disable firewalld
+     service:
+       name: firewalld
+       state: stopped
+       enabled: no 
+
