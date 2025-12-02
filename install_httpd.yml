@@ -1,0 +1,39 @@
+---
+
+ - name: installation of httpd on server playbook
+   hosts: all
+   become: true
+   tasks:
+  
+   - name: update repository pkgs
+     yum:
+       update_cache: yes
+  
+   - name: install below packages
+     yum:
+       name: httpd
+
+   - name: install java for httpd pkg
+     yum: 
+       name: java
+
+   - name: Copy file to remote server
+     copy:
+        src: /var/www/html/index.html
+        dest: /var/www/html/index.html
+        owner: ANSIBLE-USER
+        group: ANSIBLE-USER
+        mode: '0644'
+
+   - name: Ensure firewalld is installed and running
+     yum:
+       name: firewalld
+       state: present
+     when: ansible_os_family == "RedHat"
+
+   - name: Start and enable firewalld
+     service:
+       name: firewalld
+       state: started
+       enabled: yes
+
