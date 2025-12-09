@@ -3,7 +3,7 @@
 # Usage:
 # ansible-playbook -i inventory hostname_standardization.yml \
 #   -e target_hosts=redhat \
-#   -e new_shortname=server1 \
+#   -e new_shortname=server1 \ 
 #   -e new_fqdn=server1.example.com \
 #   -e host_ip=192.168.1.130
 
