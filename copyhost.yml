@@ -1,0 +1,15 @@
+
+- name: Backup /etc/hostname
+  hosts: servers
+  become: true         # required to read /etc and write /etc/hostname.bak
+  tasks:
+    - name: taking backup of hostname conf file
+      ansible.builtin.copy:
+        src: /etc/hostname
+        dest: /etc/hostname.bak
+        remote_src: true
+        owner: root
+        group: root
+        mode: '0644'
+        backup: true
+
