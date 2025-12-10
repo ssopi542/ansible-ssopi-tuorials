@@ -1,0 +1,65 @@
+
+---
+- name: Convert FQDN hostname to shortname and persist it
+  hosts: servers
+  become: true
+  gather_facts: true
+
+  vars:
+    # If true, update /etc/hosts entries to reflect shortname (optional)
+    update_hosts: true
+
+    # If your environment prefers keeping both shortname and FQDN in /etc/hosts, set this
+    keep_fqdn_alias_in_hosts: true
+
+    # Optional: If ansible_hostname happens to be FQDN (rare), take first label
+    prefer_ansible_hostname: true
+
+  tasks:
+    - name: Read current hostname from /etc/hostname (if the file exists)
+      ansible.builtin.slurp:
+        src: /etc/hostname
+      register: hostname_file
+      ignore_errors: true
+
+    - name: Decode current hostname text
+      when: hostname_file is defined and hostname_file.content is defined
+      ansible.builtin.set_fact:
+        current_hostname_file: "{{ hostname_file.content | b64decode | trim }}"
+
+    - name: Determine current effective hostname (facts or file as fallback)
+      ansible.builtin.set_fact:
+        current_hostname_effective: >-
+          {{ (ansible_hostname | default('', true) | trim) 
+             if prefer_ansible_hostname else
+             (current_hostname_file | default(ansible_hostname, true)) }}
+
+    - name: Compute short hostname (strip domain labels if any)
+      ansible.builtin.set_fact:
+        short_hostname: "{{ current_hostname_effective.split('.')[0] | lower }}"
+
+    - name: Show plan
+      ansible.builtin.debug:
+        msg:
+          - "Current hostname (effective): {{ current_hostname_effective }}"
+          - "Computed short hostname: {{ short_hostname }}"
+
+    - name: Change hostname using systemd (hostnamectl) when available
+      when: ansible_service_mgr == 'systemd'
+      ansible.builtin.hostname:
+        name: "{{ short_hostname }}"
+        use: systemd
+
+    - name: Change hostname using 'file' method when systemd is not available
+      when: ansible_service_mgr != 'systemd'
+      ansible.builtin.hostname:
+        name: "{{ short_hostname }}"
+        use: file
+
+    - name: Validate hostname is now shortname (no dots)
+      ansible.builtin.assert:
+        that:
+          - short_hostname is match("^[A-Za-z0-9][A-Za-z0-9._-]*$")
+          - short_hostname == (ansible_hostname | lower)
+        success_msg: "Hostname successfully set to shortname: {{ ansible_hostname }}"
+        fail_msg: "Hostname change did not take effect as expected. Found ansible_hostname={{ ansible_hostname }}, expected {{ short_hostname }}."
