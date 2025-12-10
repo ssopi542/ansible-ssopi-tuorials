@@ -1,0 +1,18 @@
+
+---
+- name: Shutdown remote Linux servers immediately
+  hosts: servers
+  become: true
+  gather_facts: false
+  #serial: 1   # shut down one host at a time (safer)
+
+  tasks:
+    - name: Announce maintenance (optional)
+      ansible.builtin.debug:
+        msg: "Shutdown initiated by ANSIBLE-ADMIN user"
+
+    - name: Shutdown now (halt)
+      ansible.builtin.command: shutdown -h now "Shutdown initiated by Ansible-ADMIN"
+      # If using systemd, you could use: poweroff
+      # ansible.builtin.command: poweroff
+
