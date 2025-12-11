@@ -1,0 +1,75 @@
+---
+# file: hostname_standardization.yml
+# Usage:
+# ansible-playbook -i inventory hostname_standardization.yml \
+#   -e target_hosts=redhat \
+#   -e new_shortname=server1 \ 
+#   -e new_fqdn=server1.example.com \
+#   -e host_ip=192.168.1.130
+
+- name: Standardize hostname and hosts on RHEL
+  # hosts: "{{ target_hosts | default('all') }}"
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    new_shortname: "{{ $hostname }}"
+    new_fqdn: "{{ $new_shortname }}"
+    host_ip: "192.168.1.110" 
+    # Layout: IP  FQDN  Shortname
+    desired_hosts_line: "{{ host_ip }} {{ new_fqdn }} {{ new_shortname }}"
+
+  pre_tasks:
+    - name: Backup /etc/hostname
+      ansible.builtin.copy:
+        src: /etc/hostname
+        dest: /etc/hostname.bak
+        remote_src: true
+        owner: root
+        group: root
+        mode: '0644'
+      ignore_errors: true
+
+    - name: Backup /etc/hosts
+      ansible.builtin.copy:
+        src: /etc/hosts
+        dest: /etc/hosts.bak
+        remote_src: true
+        owner: root
+        group: root
+        mode: '0644'
+      ignore_errors: true
+
+  tasks:
+    - name: Ensure hostname is the short name (RHEL uses hostnamectl)
+      ansible.builtin.hostname:
+        name: "{{ new_shortname }}"
+      notify: Reload hostname facts
+
+    - name: Ensure /etc/hosts entry exists (IP FQDN Shortname)
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        create: true
+        owner: root
+        group: root
+        mode: '0644'
+        state: present
+        # If an entry with this IP already exists, replace it
+        regexp: "^(?:{{ host_ip | regex_escape() }}\\s+).*"
+        line: "{{ desired_hosts_line }}"
+
+    # Optional: also ensure loopback has shortname & fqdn (common on RHEL)
+    - name: Ensure loopback line contains localhost + shortname (optional)
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: "^127\\.0\\.0\\.1\\s+"
+        line: "127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4 {{ new_shortname }}"
+        backrefs: false
+        state: present
+
+  handlers:
+    - name: Reload hostname facts
+      ansible.builtin.setup:
+        filter: ansible_hostname,ansible_fqdn
+
