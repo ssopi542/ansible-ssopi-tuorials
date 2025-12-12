@@ -1,0 +1,33 @@
+
+---
+- name: Backup and set short hostname (RHEL)
+  hosts: servers
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Backup /etc/hostname
+      ansible.builtin.copy:
+        src: /etc/hostname
+        dest: /etc/hostname.backup
+        remote_src: true
+        owner: root
+        group: root
+        mode: '0644'
+        backup: true
+
+    - name: Write short hostname into /etc/hostname
+      ansible.builtin.copy:
+        dest: /etc/hostname
+        content: "{{ ansible_facts['fqdn'].split('.')[0] }}\n"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Apply hostname immediately (runtime)
+      ansible.builtin.command: "hostnamectl set-hostname {{ ansible_facts['fqdn'].split('.')[0] }}"
+      # Better: only run if current hostname differs
+      #when: ansible_facts['hostname'] !=      when: ansible_facts['hostname'] != ansible_facts['fqdn'].split('.')[0]
+
+      # - name: Refresh facts after hostname change
+
