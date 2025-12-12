@@ -1,0 +1,20 @@
+
+---
+- name: Force /etc/hostname to short value and apply it
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Write short hostname into /etc/hostname
+      ansible.builtin.copy:
+        dest: /etc/hostname
+        content: "{{ ansible_facts['fqdn'].split('.')[0] }}\n"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Apply hostname immediately (runtime)
+      ansible.builtin.command: "hostnamectl set-hostname {{ ansible_facts['fqdn'].split('.')[0] }}"
+      changed_when: false
+
