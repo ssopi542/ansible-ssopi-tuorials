@@ -26,8 +26,3 @@
 
     - name: Apply hostname immediately (runtime)
       ansible.builtin.command: "hostnamectl set-hostname {{ ansible_facts['fqdn'].split('.')[0] }}"
-      # Better: only run if current hostname differs
-      #when: ansible_facts['hostname'] !=      when: ansible_facts['hostname'] != ansible_facts['fqdn'].split('.')[0]
-
-      # - name: Refresh facts after hostname change
-
