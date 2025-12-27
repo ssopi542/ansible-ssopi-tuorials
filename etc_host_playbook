@@ -1,0 +1,17 @@
+---
+- name: Add only this host's own entry to /etc/hosts
+  hosts: test2swapnilsrv
+  become: true
+  gather_facts: true
+
+  vars:
+    # FQDN with uppercase short hostname, domain unchanged.
+    # If ansible_domain is missing, it will just be the uppercased hostname.
+    fqdn_caps: "{{ (ansible_hostname | upper) ~ ('.' ~ ansible_domain if (ansible_domain is defined and ansible_domain|length > 0) else '') }}"
+
+  tasks:
+    - name: Ensure this host's line is present in /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        insertafter: EOF
+        line: "{{ ansible_default_ipv4.address }} {{ fqdn_caps }} {{ ansible_hostname | upper }}"
